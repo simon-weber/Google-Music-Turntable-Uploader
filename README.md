@@ -9,4 +9,3 @@ Story:
 
 TODO
 * create turntable UI
-* implement the [gm call to download a track](https://github.com/simon-weber/Unofficial-Google-Music-API/blob/develop/gmusicapi/protocol/webclient.py#L454)

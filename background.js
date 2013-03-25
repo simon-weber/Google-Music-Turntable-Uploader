@@ -1,4 +1,4 @@
-var lib_chunk_url = 'https://play.google.com/music/loadalltracks';
+var gm_service_url =  'https://play.google.com/music/services/';
 
 // GM tracks have a lot of keys; storing all of them will overrun our storage
 // quota.
@@ -13,6 +13,8 @@ var keep_keys = [
     'title'
 ];
 
+
+
 // cookies we need for our requests
 // cookies are automatically sent, but we need xt in the querystring.
 var cookie_details = [
@@ -25,7 +27,6 @@ var cookie_details = [
 var cookie_names = cookie_details.map( function(details) {
     return details.name;
 });
-
 
 function store_cookie(cookie){
     if (cookie !== null){
@@ -63,11 +64,56 @@ function unless_error(func) {
 }
 
 
-// clients call with just the first two args
-function fetch_library(xt_val, callback, cont_token, prev_chunk){
+// GM:
+
+// returns parsed json response
+function _gm_request(endpoint, data, callback){
+    chrome.storage.local.get(cookie_names, unless_error(function(cookie_map) {
+        if (Object.keys(cookie_map).length != cookie_details.length){
+            console.log('auth invalid: ', cookie_map);
+            return;
+        }
+
+        var url = gm_service_url + endpoint + '?u=0&xt=' + cookie_map.xt.value;
+
+        $.post(
+            url,
+            {json: JSON.stringify(data)},
+            function(res) {
+                callback(res);
+            },
+            'json'
+        )
+        .fail(function(res) { console.log('request failed:', url, data); });
+    }));
+}
+
+// returns a Blob
+function fetch_track_audio(id, callback){
+    _gm_request('multidownload', {songIds: [id]}, function(res){
+        console.log('audio fetch url:', res.url);
+
+        // jquery doesn't deal with binary data well
+        var xhr = new XMLHttpRequest();
+        xhr.open('GET', res.url, true);
+        xhr.responseType = 'blob';
+         
+        xhr.onload = function(oEvent) {
+            console.log(xhr);
+            return xhr.response;
+        };
+         
+        xhr.send();
+
+    });
+}
+
+// returns array of track objects
+// clients just provide callback - other args used recursively
+function fetch_library(callback, cont_token, prev_chunk){
     var req = {};
 
-    if(arguments.length == 2){
+    if(arguments.length == 1){
         console.log('no cont_token');
         prev_chunk = [];
     } else {
@@ -75,53 +121,39 @@ function fetch_library(xt_val, callback, cont_token, prev_chunk){
         req = {continuationToken: cont_token};
     }
 
-    $.post(
-        ('https://play.google.com/music/services/loadalltracks?u=0&xt=' + xt_val),
-        {json: JSON.stringify(req)},
-        function(res) {
-            console.log('chunk fetch result: ', res);
-            console.log('(first song): ', res.playlist[0]);
+    _gm_request('loadalltracks', req, function(res){
+        console.log('chunk fetch result: ', res);
+        console.log('(first song): ', res.playlist[0]);
 
-            var library = prev_chunk.concat(res.playlist.map(function(track){
-                // delete keys we don't want (mutation avoids mem overhead)
-                for (var key in track) {
-                    if (track.hasOwnProperty(key)) {
-                        if ($.inArray(key, keep_keys) == -1)
-                            delete track[key];
-                    }
+        var library = prev_chunk.concat(res.playlist.map(function(track){
+            // delete keys we don't want (mutation avoids mem overhead)
+            for (var key in track) {
+                if (track.hasOwnProperty(key)) {
+                    if ($.inArray(key, keep_keys) == -1)
+                        delete track[key];
                 }
-                return track;
-            }));
-
-            if( !('continuationToken' in res) ){
-                callback(library); // got the entire library
-            } else{
-                fetch_library(xt_val, callback, res.continuationToken, library);
             }
-        },
-        'json'
-    )
-    .fail(function(res) { console.log('chunk fetch error'); });
+            return track;
+        }));
+
+        if( !('continuationToken' in res) ){
+            callback(library); // got the entire library
+        } else{
+            fetch_library(callback, res.continuationToken, library);
+        }
+    });
 }
 
 function cache_library(){
-    chrome.storage.local.get(cookie_names, unless_error(function(cookie_map) {
-        if (Object.keys(cookie_map).length != cookie_details.length){
-            console.log('auth invalid: ', cookie_map);
-            return;
-        }
-
-        fetch_library(cookie_map.xt.value, function(library) {
-            chrome.storage.local.set({library: library}, unless_error(function() {
-                console.log('cached library');
-            }));
-        });
-    }));
+    fetch_library(function(library) {
+        chrome.storage.local.set({library: library}, unless_error(function() {
+            console.log('cached library');
+        }));
+    });
 }
 
 
-// get initial data and hook up event handlers
-
+// main:
 for (var i = 0; i < cookie_details.length; i++) {
     chrome.cookies.get(cookie_details[i], store_cookie);
 }

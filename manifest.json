@@ -29,6 +29,7 @@
     "permissions": [
         "http://turntable.fm/*",
         "*://*.google.com/*",
+        "http://*.googleusercontent.com/*",
         "cookies",
         "storage",
         "tabs"
