@@ -1,13 +1,21 @@
+function upload_track(id){
+    chrome.extension.sendMessage({action: 'get_track_file', id: id}, function(response) {
+        var file = response.file;
+
+        console.log(file); //TODO
+    });
+}
+
 function show_library(){
-    chrome.extension.sendMessage('get_library', function(response) {
+    chrome.extension.sendMessage({action: 'get_library'}, function(response) {
         var library = response.library;
 
-        console.log(library);
+        console.log(library); //TODO
     });
 }
 
 function main(){
-    chrome.extension.sendMessage('show_page_action');
+    chrome.extension.sendMessage({action: 'show_page_action'});
 
     // create our button
     // TODO replicate mouseover style

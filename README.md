@@ -9,3 +9,4 @@ Story:
 
 TODO
 * create turntable UI
+* figure out a way to spoof turntable uploader into taking our blobs

@@ -13,6 +13,35 @@ var keep_keys = [
     'title'
 ];
 
+window.requestFileSystem  = window.requestFileSystem || window.webkitRequestFileSystem;
+
+function handle_filesystem_error(e) {
+  var msg = '';
+
+  switch (e.code) {
+    case FileError.QUOTA_EXCEEDED_ERR:
+      msg = 'QUOTA_EXCEEDED_ERR';
+      break;
+    case FileError.NOT_FOUND_ERR:
+      msg = 'NOT_FOUND_ERR';
+      break;
+    case FileError.SECURITY_ERR:
+      msg = 'SECURITY_ERR';
+      break;
+    case FileError.INVALID_MODIFICATION_ERR:
+      msg = 'INVALID_MODIFICATION_ERR';
+      break;
+    case FileError.INVALID_STATE_ERR:
+      msg = 'INVALID_STATE_ERR';
+      break;
+    default:
+      msg = 'Unknown Error';
+      break;
+  }
+
+  console.log('filesystem error: ' + msg);
+}
+
 
 
 // cookies we need for our requests
@@ -100,7 +129,7 @@ function fetch_track_audio(id, callback){
          
         xhr.onload = function(oEvent) {
             console.log(xhr);
-            return xhr.response;
+            callback(xhr.response);
         };
          
         xhr.send();
@@ -144,6 +173,28 @@ function fetch_library(callback, cont_token, prev_chunk){
     });
 }
 
+function cache_track_audio(id, fs){
+    console.log('caching', id);
+
+    fetch_track_audio(id, function(track_blob){
+        fs.root.getFile(id, {create: true}, function(file_entry){
+            file_entry.createWriter(function(writer) {
+
+                writer.onwriteend = function(e) {
+                    console.log('write success', e);
+                };
+
+                writer.onerror = function(e) {
+                    console.log('write failure', e);
+                };
+
+                writer.write(track_blob);
+
+            }, handle_filesystem_error);
+        }, handle_filesystem_error);
+    });
+}
+
 function cache_library(){
     fetch_library(function(library) {
         chrome.storage.local.set({library: library}, unless_error(function() {
@@ -153,35 +204,50 @@ function cache_library(){
 }
 
 
-// main:
-for (var i = 0; i < cookie_details.length; i++) {
-    chrome.cookies.get(cookie_details[i], store_cookie);
+function main(fs){
+    for (var i = 0; i < cookie_details.length; i++) {
+        chrome.cookies.get(cookie_details[i], store_cookie);
+    }
+
+    // watch for changes to the cookies we care about
+    chrome.cookies.onChanged.addListener(function(change_info){
+        var cookie = change_info.cookie;
+        var name = cookie.name;
+
+        if ($.inArray(cookie.name, cookie_names) > -1 ){
+            handle_cookie_change(change_info);
+        }
+    });
+
+    chrome.pageAction.onClicked.addListener(function(tab){
+        cache_library();
+    });
+
+    // respond to content_script library requests
+    chrome.extension.onMessage.addListener(function(request, sender, sendResponse) {
+        if (request.action == 'get_library'){
+            chrome.storage.local.get('library', unless_error(function(library){
+                sendResponse({library: library});
+            }));
+            return true;
+
+        } else if (request.action == 'get_track_file'){
+            fs.root.getFile(request.id, {}, function(file_entry) {
+                file_entry.file(function(file) {
+                    sendResponse({file: file});
+                }, handle_filesystem_error);
+            }, handle_filesystem_error);
+            return true;
+
+        } else if (request.action == 'show_page_action'){
+            chrome.pageAction.show(sender.tab.id);
+        } else {
+            sendResponse({});
+        }
+    });
 }
 
-// watch for changes to the cookies we care about
-chrome.cookies.onChanged.addListener(function(change_info){
-    var cookie = change_info.cookie;
-    var name = cookie.name;
-
-    if ($.inArray(cookie.name, cookie_names) > -1 ){
-        handle_cookie_change(change_info);
-    }
-});
-
-chrome.pageAction.onClicked.addListener(function(tab){
-    cache_library();
-});
-
-// respond to content_script library requests
-chrome.extension.onMessage.addListener(function(request, sender, sendResponse) {
-    if (request == 'get_library'){
-        chrome.storage.local.get('library', unless_error(function(library){
-            sendResponse({library: library});
-        }));
-        return true;
-    } else if (request == 'show_page_action'){
-        chrome.pageAction.show(sender.tab.id);
-    } else {
-        sendResponse({});
-    }
-});
+// is there a way to have a dynamically-sized filesystem?
+window.requestFileSystem(window.TEMPORARY, 30 * 1024 * 1024, function(fs){
+    main(fs);
+}, handle_filesystem_error);
