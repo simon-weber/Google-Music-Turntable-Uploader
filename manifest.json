@@ -1,0 +1,36 @@
+{
+    "manifest_version": 2,
+
+    "name": "Google Music to Turntable",
+    "version": "1.0",
+
+    "description": "This extension allows you to easily upload to turntable.fm from Google Music.",
+    "icons": {
+        "128": "ok.png"
+    },
+
+    "page_action": {
+        "default_title": "Google Music to Turntable"
+    },
+
+    "background": {
+        "scripts": ["jquery-1.9.1.min.js", "background.js"],
+        "persistent": false
+    },
+    "content_scripts": [
+        {
+            "matches": ["http://turntable.fm/*"],
+            "js": ["jquery-1.9.1.min.js", "turntable.js"],
+            "run_at": "document_end"
+        }
+    ],
+    "minimum_chrome_version": "22",
+
+    "permissions": [
+        "http://turntable.fm/*",
+        "*://*.google.com/*",
+        "cookies",
+        "storage",
+        "tabs"
+    ]
+}
