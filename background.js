@@ -223,6 +223,9 @@ function main(fs){
         cache_library();
     });
 
+    //store once before testing
+    //cache_track_audio("9fdae3e8-9ee3-3f2c-85aa-65d7cc02efdd", fs);
+
     // respond to content_script library requests
     chrome.extension.onMessage.addListener(function(request, sender, sendResponse) {
         if (request.action == 'get_library'){

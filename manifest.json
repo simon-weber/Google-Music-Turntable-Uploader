@@ -24,6 +24,10 @@
             "run_at": "document_end"
         }
     ],
+    "web_accessible_resources": [
+        "turntable_inject.js"
+    ],
+
     "minimum_chrome_version": "22",
 
     "permissions": [

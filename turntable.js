@@ -2,7 +2,13 @@ function upload_track(id){
     chrome.extension.sendMessage({action: 'get_track_file', id: id}, function(response) {
         var file = response.file;
 
-        console.log(file); //TODO
+        var code = '(trigger_turntable_googlemusic_upload(' + JSON.stringify(
+        actualCodevar run_function = '(' + function(greeting, name) { ...
+        } + ')(' + JSON.stringify(GREETING) + ',' + JSON.stringify(NAME) + ')';
+
+
+        console.log(file);
+
     });
 }
 
@@ -16,6 +22,14 @@ function show_library(){
 
 function main(){
     chrome.extension.sendMessage({action: 'show_page_action'});
+
+    // inject our upload function
+    var s = document.createElement('script');
+    s.src = chrome.extension.getURL("turntable_inject_once.js");
+    s.onload = function() {
+        this.parentNode.removeChild(this);
+    };
+    (document.head||document.documentElement).appendChild(s);
 
     // create our button
     // TODO replicate mouseover style
