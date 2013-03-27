@@ -1,9 +1,9 @@
+/*
 function trigger_turntable_googlemusic_upload(file){
     var file_list = [];
 
     file_list.push(file);
 
-    /* spoof the filelist api */
     file_list.item = function(index){
         if(index == 0){
             return file;
@@ -15,3 +15,4 @@ function trigger_turntable_googlemusic_upload(file){
     e.originalEvent = {dataTransfer : { files : file_list } };
     $('#drop-zone').trigger(e);
 }
+*/
