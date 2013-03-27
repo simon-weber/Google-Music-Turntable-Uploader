@@ -25,10 +25,7 @@ function upload_track(id){
             blob.name = 'myfile.mp3';
             blob.lastModifiedDate = new Date();
 
-            var file = new window.plupload.File(blob, blob.name, blob.size);
-            console.log(file);
-
-            /* window.turntable.uploader.trigger("FilesAdded", [file]) */
+            document.querySelector('input[type=file]').onchange.call({files:[blob]})
 
         } + ')(' + JSON.stringify(dataurl) + ')';
 
