@@ -1,4 +1,5 @@
-var gm_service_url =  'https://play.google.com/music/services/';
+var gm_base_url = 'https://play.google.com/music/';
+var gm_service_url =  gm_base_url + 'services/';
 
 // blob encoding testing
 var test_url = 'https://s3.amazonaws.com/assets.turntable.fm/roommanager_assets/props/wallpaper_full.png'
@@ -100,7 +101,7 @@ function unless_error(func) {
 // GM:
 
 // returns parsed json response
-function _gm_request(endpoint, data, callback){
+function _authed_gm_request(endpoint, data, callback){
     chrome.storage.local.get(cookie_names, unless_error(function(cookie_map) {
         if (Object.keys(cookie_map).length != cookie_details.length){
             console.log('auth invalid: ', cookie_map);
@@ -123,23 +124,50 @@ function _gm_request(endpoint, data, callback){
 
 // returns a Blob
 function fetch_track_audio(id, callback){
-    _gm_request('multidownload', {songIds: [id]}, function(res){
-        console.log('audio fetch url:', res.url);
+    var url = gm_base_url + 'play';
 
-        // jquery doesn't deal with binary data well
-        var xhr = new XMLHttpRequest();
-        xhr.open('GET', res.url, true);
-        xhr.responseType = 'blob';
-         
-        xhr.onload = function(oEvent) {
-            console.log(xhr);
-            callback(xhr.response);
-        };
-         
-        xhr.send();
-
-    });
+    // get the stream url from gmusic, then get the actual audio
+    $.get(
+        url,
+        {u: 0, pt: 'e', songid: id},
+        function(res) {
+            // jquery doesn't deal with binary data well
+            var xhr = new XMLHttpRequest();
+            xhr.open('GET', res.url, true);
+            xhr.responseType = 'blob';
+          
+            xhr.onload = function(oEvent) {
+                callback(xhr.response);
+            };
+          
+            xhr.send();
+        },
+        'json'
+        )
+        .fail(function(res) { console.log('request failed:', url, data); });
 }
+
+
+// //this doesn't guarantee an mp3 (which turntable needs)
+// //and also counts against your quota.
+// function fetch_track_audio(id, callback){
+//     _authed_gm_request('multidownload', {songIds: [id]}, function(res){
+//         console.log('audio fetch url:', res.url);
+// 
+//         // jquery doesn't deal with binary data well
+//         var xhr = new XMLHttpRequest();
+//         xhr.open('GET', res.url, true);
+//         xhr.responseType = 'blob';
+//          
+//         xhr.onload = function(oEvent) {
+//             console.log(xhr);
+//             callback(xhr.response);
+//         };
+//          
+//         xhr.send();
+// 
+//     });
+// }
 
 // returns array of track objects
 // clients just provide callback - other args used recursively
@@ -154,7 +182,7 @@ function fetch_library(callback, cont_token, prev_chunk){
         req = {continuationToken: cont_token};
     }
 
-    _gm_request('loadalltracks', req, function(res){
+    _authed_gm_request('services/loadalltracks', req, function(res){
         console.log('chunk fetch result: ', res);
         console.log('(first song): ', res.playlist[0]);
 
@@ -177,6 +205,7 @@ function fetch_library(callback, cont_token, prev_chunk){
     });
 }
 
+// no longer needed
 function cache_track_audio(id, fs){
     console.log('caching', id);
 
@@ -227,9 +256,6 @@ function main(fs){
         cache_library();
     });
 
-    //store once before testing
-    //cache_track_audio("9fdae3e8-9ee3-3f2c-85aa-65d7cc02efdd", fs);
-
     // respond to content_script library requests
     chrome.extension.onMessage.addListener(function(request, sender, sendResponse) {
         if (request.action == 'get_library'){
@@ -238,12 +264,19 @@ function main(fs){
             }));
             return true;
 
-        } else if (request.action == 'get_track_file'){
-            fs.root.getFile(request.id, {}, function(file_entry) {
-                file_entry.file(function(file) {
-                    sendResponse({file: file});
-                }, handle_filesystem_error);
-            }, handle_filesystem_error);
+        } else if (request.action == 'get_track_dataurl'){
+            // fs.root.getFile(request.id, {}, function(file_entry) {
+            //     file_entry.file(function(file) {
+            //         sendResponse({file: file});
+            //     }, handle_filesystem_error);
+            // }, handle_filesystem_error);
+            fetch_track_audio(request.id, function(track_blob){
+                var reader = new FileReader();
+                reader.onload = function(event){
+                    sendResponse({dataurl: event.target.result});
+                };
+                reader.readAsDataURL(track_blob);
+            });
             return true;
 
         } else if (request.action == 'show_page_action'){

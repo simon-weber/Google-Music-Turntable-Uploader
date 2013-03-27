@@ -15,11 +15,27 @@ function test_blob_encoding(id){
 }
 
 function upload_track(id){
-    chrome.extension.sendMessage({action: 'get_track_file', id: id}, function(response) {
-        var file = response.file;
+    chrome.extension.sendMessage({action: 'get_track_dataurl', id: id}, function(response) {
+        var dataurl = response.dataurl;
 
-        console.log(file);
+        var inject_code = '(' + function(inject_dataurl) {
+            var blob = gmusicturntable_dataurl_to_blob(inject_dataurl);
 
+            /* spoof the File interface */
+            blob.name = 'myfile.mp3';
+            blob.lastModifiedDate = new Date();
+
+            var file = new window.plupload.File(blob, blob.name, blob.size);
+            console.log(file);
+
+            /* window.turntable.uploader.trigger("FilesAdded", [file]) */
+
+        } + ')(' + JSON.stringify(dataurl) + ')';
+
+       var script = document.createElement('script');
+       script.textContent = inject_code;
+       (document.head||document.documentElement).appendChild(script);
+       script.parentNode.removeChild(script);
     });
 }
 
