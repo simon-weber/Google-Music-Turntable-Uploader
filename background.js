@@ -1,10 +1,6 @@
 var gm_base_url = 'https://play.google.com/music/';
 var gm_service_url =  gm_base_url + 'services/';
 
-// blob encoding testing
-var test_url = 'https://s3.amazonaws.com/assets.turntable.fm/roommanager_assets/props/wallpaper_full.png'
-
-
 // GM tracks have a lot of keys; storing all of them will overrun our storage
 // quota.
 var keep_keys = [
@@ -18,46 +14,12 @@ var keep_keys = [
     'title'
 ];
 
-window.requestFileSystem  = window.requestFileSystem || window.webkitRequestFileSystem;
 
-function handle_filesystem_error(e) {
-  var msg = '';
-
-  switch (e.code) {
-    case FileError.QUOTA_EXCEEDED_ERR:
-      msg = 'QUOTA_EXCEEDED_ERR';
-      break;
-    case FileError.NOT_FOUND_ERR:
-      msg = 'NOT_FOUND_ERR';
-      break;
-    case FileError.SECURITY_ERR:
-      msg = 'SECURITY_ERR';
-      break;
-    case FileError.INVALID_MODIFICATION_ERR:
-      msg = 'INVALID_MODIFICATION_ERR';
-      break;
-    case FileError.INVALID_STATE_ERR:
-      msg = 'INVALID_STATE_ERR';
-      break;
-    default:
-      msg = 'Unknown Error';
-      break;
-  }
-
-  console.log('filesystem error: ' + msg);
-}
-
-
-
-// cookies we need for our requests
-// cookies are automatically sent, but we need xt in the querystring.
+// cookies handling:
+// the cookies we need to monitor for GM auth - xt goes in the params of requests
 var cookie_details = [
     {name: 'xt', url: 'https://play.google.com/music'}
-    /* {name: 'HSID', url: 'http://google.com'},
-    {name: 'SSID', url: 'https://google.com'},
-    {name: 'SID', url: 'http://google.com'} */
 ];
-
 var cookie_names = cookie_details.map( function(details) {
     return details.name;
 });
@@ -84,6 +46,7 @@ function handle_cookie_change(change_info){
         store_cookie(cookie);
     }
 }
+
 
 // decorator for chrome callbacks
 function unless_error(func) {
@@ -183,8 +146,8 @@ function fetch_library(callback, cont_token, prev_chunk){
     }
 
     _authed_gm_request('services/loadalltracks', req, function(res){
-        console.log('chunk fetch result: ', res);
-        console.log('(first song): ', res.playlist[0]);
+        //console.log('chunk fetch result: ', res);
+        //console.log('(first song): ', res.playlist[0]);
 
         var library = prev_chunk.concat(res.playlist.map(function(track){
             // delete keys we don't want (mutation avoids mem overhead)
@@ -205,39 +168,16 @@ function fetch_library(callback, cont_token, prev_chunk){
     });
 }
 
-// no longer needed
-function cache_track_audio(id, fs){
-    console.log('caching', id);
-
-    fetch_track_audio(id, function(track_blob){
-        fs.root.getFile(id, {create: true}, function(file_entry){
-            file_entry.createWriter(function(writer) {
-
-                writer.onwriteend = function(e) {
-                    console.log('write success', e);
-                };
-
-                writer.onerror = function(e) {
-                    console.log('write failure', e);
-                };
-
-                writer.write(track_blob);
-
-            }, handle_filesystem_error);
-        }, handle_filesystem_error);
-    });
-}
-
 function cache_library(){
     fetch_library(function(library) {
         chrome.storage.local.set({library: library}, unless_error(function() {
-            console.log('cached library');
+            //console.log('cached library');
         }));
     });
 }
 
 
-function main(fs){
+function main(){
     for (var i = 0; i < cookie_details.length; i++) {
         chrome.cookies.get(cookie_details[i], store_cookie);
     }
@@ -265,11 +205,6 @@ function main(fs){
             return true;
 
         } else if (request.action == 'get_track_dataurl'){
-            // fs.root.getFile(request.id, {}, function(file_entry) {
-            //     file_entry.file(function(file) {
-            //         sendResponse({file: file});
-            //     }, handle_filesystem_error);
-            // }, handle_filesystem_error);
             fetch_track_audio(request.id, function(track_blob){
                 var reader = new FileReader();
                 reader.onload = function(event){
@@ -281,33 +216,10 @@ function main(fs){
 
         } else if (request.action == 'show_page_action'){
             chrome.pageAction.show(sender.tab.id);
-        } else if (request.action == 'get_test_file'){
-            // respond with a dataurl
-            var xhr = new XMLHttpRequest();
-            xhr.open('GET', test_url, true);
-            xhr.responseType = 'blob';
-             
-            xhr.onload = function(oEvent) {
-                console.log('test file onload:', xhr);
-
-                var reader = new FileReader();
-                reader.onload = function(event){
-                    console.log('dataurl:', event.target.result);
-                    sendResponse({dataurl: event.target.result});
-                };
-                reader.readAsDataURL(xhr.response);
-            };
-             
-            xhr.send();
-
-            return true;
         } else {
             sendResponse({});
         }
     });
 }
 
-// is there a way to have a dynamically-sized filesystem?
-window.requestFileSystem(window.TEMPORARY, 30 * 1024 * 1024, function(fs){
-    main(fs);
-}, handle_filesystem_error);
+main();

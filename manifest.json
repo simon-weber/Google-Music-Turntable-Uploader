@@ -34,7 +34,6 @@
         "http://turntable.fm/*",
         "*://*.google.com/*",
         "http://*.googleusercontent.com/*",
-        "https://s3.amazonaws.com/*",
         "cookies",
         "storage",
         "tabs"

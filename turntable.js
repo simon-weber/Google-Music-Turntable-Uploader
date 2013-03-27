@@ -1,19 +1,3 @@
-function test_blob_encoding(id){
-    chrome.extension.sendMessage({action: 'get_test_file', id: id}, function(response) {
-        var dataurl = response.dataurl;
-
-        var inject_code = '(' + function(inject_dataurl) {
-            var blob = gmusicturntable_dataurl_to_blob(inject_dataurl);
-            console.log(blob);
-        } + ')(' + JSON.stringify(dataurl) + ')';
-
-       var script = document.createElement('script');
-       script.textContent = inject_code;
-       (document.head||document.documentElement).appendChild(script);
-       script.parentNode.removeChild(script);
-    });
-}
-
 function upload_track(id){
     chrome.extension.sendMessage({action: 'get_track_dataurl', id: id}, function(response) {
         var dataurl = response.dataurl;
@@ -49,7 +33,7 @@ function main(){
 
     // inject our deserialize function
     var s = document.createElement('script');
-    s.src = chrome.extension.getURL("turntable_inject.js");
+    s.src = chrome.extension.getURL('turntable_inject.js');
     s.onload = function() {
         this.parentNode.removeChild(this);
     };
@@ -79,14 +63,3 @@ function main(){
         setTimeout(arguments.callee,1000);
     }
 })();
-
-
-// trigger drop: http://stackoverflow.com/a/3647016/1231454
-/*
- * $("#droppable").droppable({
- *         drop: function(event, ui) {
- *             do stuff }
- *     });
- * var drop_function = $("#droppable").droppable.option('drop');
- * drop_function();
- */

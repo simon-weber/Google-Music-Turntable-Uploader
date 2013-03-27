@@ -1,4 +1,5 @@
 /* from https://github.com/ebidel/filer.js/blob/master/src/filer.js#L128 */
+
 /**
 * Creates and returns a blob from a data URL (either base64 encoded or not).
 *
