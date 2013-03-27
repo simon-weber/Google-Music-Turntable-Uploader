@@ -9,7 +9,4 @@ Story:
 
 TODO
 * create turntable UI
-* figure out a way to spoof turntable uploader into taking our blobs
-  * audio from background -> content script
-  * get audio + script into dom: http://stackoverflow.com/questions/11850970/javascript-blob-object-to-base64
-  * script triggers pluploader with `window.turntable.uploader.trigger("FilesAdded", [plupload.File(File(...))])`
+* add id3 headers dynamically
