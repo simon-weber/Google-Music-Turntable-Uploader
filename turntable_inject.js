@@ -1,18 +1,30 @@
-/*
-function trigger_turntable_googlemusic_upload(file){
-    var file_list = [];
-
-    file_list.push(file);
-
-    file_list.item = function(index){
-        if(index == 0){
-            return file;
-        }
-        return null;
-    };
-
-    var e = $.Event('drop');
-    e.originalEvent = {dataTransfer : { files : file_list } };
-    $('#drop-zone').trigger(e);
-}
+/* from https://github.com/ebidel/filer.js/blob/master/src/filer.js#L128 */
+/**
+* Creates and returns a blob from a data URL (either base64 encoded or not).
+*
+* @param {string} dataURL The data URL to convert.
+* @return {Blob} A blob representing the array buffer data.
 */
+function gmusicturntable_dataurl_to_blob(dataURL) {
+    var BASE64_MARKER = ';base64,';
+    if (dataURL.indexOf(BASE64_MARKER) == -1) {
+        var parts = dataURL.split(',');
+        var contentType = parts[0].split(':')[1];
+        var raw = parts[1];
+
+        return new Blob([raw], {type: contentType});
+    }
+
+    var parts = dataURL.split(BASE64_MARKER);
+    var contentType = parts[0].split(':')[1];
+    var raw = window.atob(parts[1]);
+    var rawLength = raw.length;
+
+    var uInt8Array = new Uint8Array(rawLength);
+
+    for (var i = 0; i < rawLength; ++i) {
+        uInt8Array[i] = raw.charCodeAt(i);
+    }
+
+    return new Blob([uInt8Array], {type: contentType});
+}

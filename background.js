@@ -1,5 +1,9 @@
 var gm_service_url =  'https://play.google.com/music/services/';
 
+// blob encoding testing
+var test_url = 'https://s3.amazonaws.com/assets.turntable.fm/roommanager_assets/props/wallpaper_full.png'
+
+
 // GM tracks have a lot of keys; storing all of them will overrun our storage
 // quota.
 var keep_keys = [
@@ -244,6 +248,26 @@ function main(fs){
 
         } else if (request.action == 'show_page_action'){
             chrome.pageAction.show(sender.tab.id);
+        } else if (request.action == 'get_test_file'){
+            // respond with a dataurl
+            var xhr = new XMLHttpRequest();
+            xhr.open('GET', test_url, true);
+            xhr.responseType = 'blob';
+             
+            xhr.onload = function(oEvent) {
+                console.log('test file onload:', xhr);
+
+                var reader = new FileReader();
+                reader.onload = function(event){
+                    console.log('dataurl:', event.target.result);
+                    sendResponse({dataurl: event.target.result});
+                };
+                reader.readAsDataURL(xhr.response);
+            };
+             
+            xhr.send();
+
+            return true;
         } else {
             sendResponse({});
         }
