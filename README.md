@@ -7,6 +7,13 @@ Story:
   * their (currently cached) library is presented and can be searched
   * results have a button next to them to upload the track to turntable
 
+
+Tricks employed:
+* injected script access to plupload.Uploader internals
+* dataurl serialization of audio when messaging (background -> content script -> injected in-DOM script)
+* chrome.cookies to grab/monitor changes to the GM xt cookie
+
+
 TODO
 * create turntable UI
 * add id3 headers dynamically
