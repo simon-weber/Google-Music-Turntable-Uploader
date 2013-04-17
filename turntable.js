@@ -58,9 +58,9 @@ function main(){
         var s = document.createElement('script');
         console.log('injecting', chrome.extension.getURL(inject_files[i]));
         s.src = chrome.extension.getURL(inject_files[i]);
-        //s.onload = function() {
-        //    this.parentNode.removeChild(this);
-        //};
+        s.onload = function() {
+            this.parentNode.removeChild(this);
+        };
         (document.head||document.documentElement).appendChild(s);
     }
 
