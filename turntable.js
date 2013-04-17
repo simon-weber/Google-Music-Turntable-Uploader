@@ -1,9 +1,12 @@
-var inject_files = ['turntable_inject.js', 'DataTables-1.9.4/media/js/jquery.dataTables.min.js'];
+var inject_files = [
+    'DataTables-1.9.4/media/js/jquery.dataTables.js',
+    'turntable_inject.js'
+    ];
 
 /*
- * Inject some javascript (as a string) into the DOM and run it.
+ * Inject some javascript (as a string) into the DOM.
  */
-function inject_and_run(code){
+function inject_code(code){
    var script = document.createElement('script');
    script.textContent = code;
    (document.head||document.documentElement).appendChild(script);
@@ -17,7 +20,7 @@ function upload_track(id){
     chrome.extension.sendMessage({action: 'get_track_dataurl', id: id}, function(response) {
         var dataurl = response.dataurl;
 
-        var inject_code = '(' + function(inject_dataurl) {
+        var code = '(' + function(inject_dataurl) {
             var blob = gmusicturntable_dataurl_to_blob(inject_dataurl);
 
             /* spoof the File interface */
@@ -28,7 +31,7 @@ function upload_track(id){
 
         } + ')(' + JSON.stringify(dataurl) + ')';
 
-       inject_and_run(inject_code);
+       inject_code(code);
     });
 }
 
@@ -39,11 +42,11 @@ function show_library(){
     chrome.extension.sendMessage({action: 'get_library'}, function(response) {
         var library = response.library;
 
-        var inject_code = '(' + function(inject_library) {
+        var code = '(' + function(inject_library) {
             gmusicturntable_show_library(inject_library);
         } + ')(' + JSON.stringify(library) + ')';
 
-       inject_and_run(inject_code);
+       inject_code(code);
     });
 }
 
@@ -53,10 +56,11 @@ function main(){
     // inject our files to use them as libraries later
     for(var i = 0; i < inject_files.length; i++){
         var s = document.createElement('script');
+        console.log('injecting', chrome.extension.getURL(inject_files[i]));
         s.src = chrome.extension.getURL(inject_files[i]);
-        s.onload = function() {
-            this.parentNode.removeChild(this);
-        };
+        //s.onload = function() {
+        //    this.parentNode.removeChild(this);
+        //};
         (document.head||document.documentElement).appendChild(s);
     }
 

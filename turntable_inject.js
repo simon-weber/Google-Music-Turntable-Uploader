@@ -34,19 +34,28 @@ function gmusicturntable_dataurl_to_blob(dataURL) {
 }
 
 function gmusicturntable_show_library(library) {
-    console.log('inject show got:', library);
-
-    var library_tbl = $('<table></table>').attr({id: 'gmusic-library'});
-
     /* TODO
-     * datatables
-     * caching
-     * */
-    for (var i = 0; i < library.length; i++) {
-        var row = $('<tr></tr>').appendTo(library_tbl);
-        $('<td></td>').text(library[i]['title']).appendTo(row);
-    }
+     * don't assume presence
+     * make keyset user-configurable
+     */
+    var col_names = Object.keys(library[0]);
 
-    turntable.showAlert(library_tbl[0]);
+    var song_arrays = library.map(function(song){
+        var ar = [];
+        for(var i = 0; i < col_names; i++){
+            ar.push(song[col_name[i]]);
+        }
+        return ar;
+    });
+
+    var dt_columns = col_names.map(function(col_name){
+        return { 'sTitle': col_name };
+    });
+
+    turntable.showAlert($('<table id="gmusicturntable_library"></table>')[0]);
     $('#overlay').find(':button').text('close');
+    $('#overlay').find('#gmusicturntable_library').dataTable({
+        'aaData': song_arrays,
+        'aoColumns': dt_columns
+    });
 }
