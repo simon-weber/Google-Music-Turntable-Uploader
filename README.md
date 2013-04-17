@@ -10,13 +10,14 @@ Story:
 
 Tricks employed:
 * injected script access to plupload.Uploader internals
-* dataurl serialization of audio when messaging (background -> content script -> injected in-DOM script)
+* dataurl serialization of audio when messaging (background -> content script -> injected script)
 * chrome.cookies to grab/monitor changes to the GM xt cookie
 
 
 TODO
 * create turntable UI
   * make it look not terrible
-  * hook upload button to each
-  * make it not horribly slow
+    * create datatable -> turntable css for even/odd, headers, buttons
+  * hook upload button to each (can use their upload icon)
+  * make it not horribly slow: pulser + timeouts when building, cache afterwards
 * add id3 headers dynamically

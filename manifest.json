@@ -21,6 +21,7 @@
         {
             "matches": ["http://turntable.fm/*"],
             "js": ["jquery-1.9.1.min.js", "turntable.js"],
+            "css": ["DataTables-1.9.4/media/css/jquery.dataTables.css"],
             "run_at": "document_end"
         }
     ],
