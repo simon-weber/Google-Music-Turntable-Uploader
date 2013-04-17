@@ -16,4 +16,7 @@ Tricks employed:
 
 TODO
 * create turntable UI
+  * make it look not terrible
+  * hook upload button to each
+  * make it not horribly slow
 * add id3 headers dynamically
