@@ -1,3 +1,18 @@
+var inject_files = ['turntable_inject.js', 'DataTables-1.9.4/media/js/jquery.dataTables.min.js'];
+
+/*
+ * Inject some javascript (as a string) into the DOM and run it.
+ */
+function inject_and_run(code){
+   var script = document.createElement('script');
+   script.textContent = code;
+   (document.head||document.documentElement).appendChild(script);
+   script.parentNode.removeChild(script);
+}
+
+/*
+ * Retrieve a file from Google, then trick Turntable into uploading it.
+ */
 function upload_track(id){
     chrome.extension.sendMessage({action: 'get_track_dataurl', id: id}, function(response) {
         var dataurl = response.dataurl;
@@ -13,33 +28,39 @@ function upload_track(id){
 
         } + ')(' + JSON.stringify(dataurl) + ')';
 
-       var script = document.createElement('script');
-       script.textContent = inject_code;
-       (document.head||document.documentElement).appendChild(script);
-       script.parentNode.removeChild(script);
+       inject_and_run(inject_code);
     });
 }
 
+/*
+ * Present the library to the user so they can choose songs to upload.
+ */
 function show_library(){
     chrome.extension.sendMessage({action: 'get_library'}, function(response) {
         var library = response.library;
 
-        console.log(library); //TODO
+        var inject_code = '(' + function(inject_library) {
+            gmusicturntable_show_library(inject_library);
+        } + ')(' + JSON.stringify(library) + ')';
+
+       inject_and_run(inject_code);
     });
 }
 
 function main(){
     chrome.extension.sendMessage({action: 'show_page_action'});
 
-    // inject our deserialize function
-    var s = document.createElement('script');
-    s.src = chrome.extension.getURL('turntable_inject.js');
-    s.onload = function() {
-        this.parentNode.removeChild(this);
-    };
-    (document.head||document.documentElement).appendChild(s);
+    // inject our files to use them as libraries later
+    for(var i = 0; i < inject_files.length; i++){
+        var s = document.createElement('script');
+        s.src = chrome.extension.getURL(inject_files[i]);
+        s.onload = function() {
+            this.parentNode.removeChild(this);
+        };
+        (document.head||document.documentElement).appendChild(s);
+    }
 
-    // create our button
+    // create/inject our button
     // TODO replicate mouseover style
     var tt_button = $('#plupload');
 

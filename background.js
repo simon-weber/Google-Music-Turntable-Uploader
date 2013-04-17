@@ -145,7 +145,7 @@ function fetch_library(callback, cont_token, prev_chunk){
         req = {continuationToken: cont_token};
     }
 
-    _authed_gm_request('services/loadalltracks', req, function(res){
+    _authed_gm_request('loadalltracks', req, function(res){
         //console.log('chunk fetch result: ', res);
         //console.log('(first song): ', res.playlist[0]);
 
@@ -199,8 +199,8 @@ function main(){
     // respond to content_script library requests
     chrome.extension.onMessage.addListener(function(request, sender, sendResponse) {
         if (request.action == 'get_library'){
-            chrome.storage.local.get('library', unless_error(function(library){
-                sendResponse({library: library});
+            chrome.storage.local.get('library', unless_error(function(result){
+                sendResponse({library: result.library});
             }));
             return true;
 

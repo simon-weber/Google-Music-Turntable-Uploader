@@ -25,7 +25,8 @@
         }
     ],
     "web_accessible_resources": [
-        "turntable_inject.js"
+        "turntable_inject.js",
+        "DataTables-1.9.4/media/js/jquery.dataTables.min.js"
     ],
 
     "minimum_chrome_version": "22",
