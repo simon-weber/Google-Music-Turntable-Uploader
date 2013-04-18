@@ -41,18 +41,29 @@ function gmusicturntable_show_library(library) {
     console.log(library);
 
     /*var col_names = Object.keys(library[0]);*/
-    var col_names = ['title', 'artist', 'album'];
+    /* setup the user-defined columns */
+    var user_col_names = ['title', 'artist', 'album'];
 
     var song_arrays = library.map(function(song){
         var ar = [];
-        for(var i = 0; i < col_names.length; i++){
-            ar.push(song[col_names[i]]);
+        ar.push(song.id); /* always have the id as first column */
+
+        for(var i = 0; i < user_col_names.length; i++){
+            ar.push(song[user_col_names[i]]);
         }
         return ar;
     });
 
-    var dt_columns = col_names.map(function(col_name){
-        return { 'sTitle': col_name };
+    var dt_columns = user_col_names.map(function(col_name){
+        return {
+            'sTitle': col_name[0].toUpperCase() + col_name.slice(1)
+        };
+    });
+    dt_columns.unshift({
+        'sTitle': 'Id',
+        'mRender': function(data, type, full){
+            return '<a href="' + data + '">Upload</a>';
+        }
     });
 
     turntable.showAlert($('<table id="gmusicturntable_library"></table>')[0]);

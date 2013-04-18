@@ -27,7 +27,7 @@ function upload_track(id){
             blob.name = 'myfile.mp3';
             blob.lastModifiedDate = new Date();
 
-            document.querySelector('input[type=file]').onchange.call({files:[blob]})
+            document.querySelector('input[type=file]').onchange.call({files:[blob]});
 
         } + ')(' + JSON.stringify(dataurl) + ')';
 
@@ -58,6 +58,7 @@ function main(){
         var s = document.createElement('script');
         console.log('injecting', chrome.extension.getURL(inject_files[i]));
         s.src = chrome.extension.getURL(inject_files[i]);
+        //TODO don't make functions in a loop
         s.onload = function() {
             this.parentNode.removeChild(this);
         };
@@ -72,11 +73,16 @@ function main(){
     gm_button.attr('id', 'gmupload');
     gm_button.text('Upload from Google Music');
     gm_button.attr('style', window.getComputedStyle(tt_button[0], null).cssText);
-    gm_button.insertAfter(tt_button);
-
+    
+    // used by injected code to request an upload
+    gm_button.bind('fetch_and_upload', function(event){
+        upload_track(event.id);
+    });
     gm_button.click(function() {
         show_library();
     });
+
+    gm_button.insertAfter(tt_button);
 }
 
 (function() {
