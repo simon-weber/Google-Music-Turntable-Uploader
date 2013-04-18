@@ -66,7 +66,7 @@ function _show_library(){
     console.log('_show', library_node);
     library_node.hide();
     // need to insert the parent; dataTable creates a wrapper
-    library_node.parent().insertAfter($('#gmusicturntable_upload_button'));
+    library_node.parent().insertAfter($('#gmusicturntable_show_library_button'));
 
     var code = '(' + function() {
         turntable.showAlert($('#gmusicturntable_library').parent()[0]);
@@ -152,8 +152,89 @@ function cache_library_node(library, callback){
     }
 }
 
+function enable_library_button(text){
+    if(typeof text === 'undefined'){
+        text = 'Upload from Google Music';
+    }
+
+    _change_button_state(
+        $('#gmusicturntable_show_library_button'),
+        false, 
+        text
+    );
+}
+
+function disable_library_button(text){
+    if(typeof text === 'undefined'){
+        text = 'Refreshing Google Music library...';
+    }
+
+    _change_button_state(
+        $('#gmusicturntable_show_library_button'),
+        true, 
+        text
+    );
+}
+
+/*
+ * If the bscript doesn't have the library cached,
+ * the show library button is repurposed for triggering a fetch.
+ */
+function make_library_button_fetch(){
+    enable_library_button('Fetch Google Music library');
+    gm_button.click(function() {
+        chrome.extension.sendMessage({action: 'refresh_library'});
+    });
+}
+
+function _change_button_state(button, is_disabled, text){
+    button.attr('disabled', is_disabled);
+    button.text(text);
+}
+
+/*
+ * Called once for init once turntable has set up their dom.
+ */
+function page_init(){
+    // create/inject our button
+    // TODO replicate mouseover style
+    var tt_button = $('#plupload');
+
+    var gm_button = tt_button.clone();
+    gm_button.attr('id', 'gmusicturntable_show_library_button');
+    gm_button.attr('style', window.getComputedStyle(tt_button[0], null).cssText);
+    enable_library_button();
+
+    // set initial button state based on bscript library cache state.
+    chrome.extension.sendMessage({action: 'is_library_cached'}, function(response) {
+        if (response.is_cached){
+            gm_button.click(show_library);
+        } else {
+            gm_button.click(function() {
+                chrome.extension.sendMessage({action: 'refresh_library'});
+            });
+            gm_button.text('Fetch Google Music library');
+        }
+    });
+
+    gm_button.insertAfter(tt_button);
+}
+
 function main(){
     chrome.extension.sendMessage({action: 'show_page_action'});
+
+    chrome.extension.onMessage.addListener(function(request, sender, sendResponse) {
+        // the background script controls fetching the library.
+        // we need to know when to invalidate our cached library_node.
+        if (request.action == 'library_updated'){
+            if (request.library === null){
+                // signals that the cache has been cleared
+                library_node = null;
+                //TODO reinit button for fetching
+            }
+            cache_library_node(request.library);
+        }
+    });
 
     // inject our files to use them as libraries later
     for(var i = 0; i < inject_files.length; i++){
@@ -167,28 +248,13 @@ function main(){
         (document.head||document.documentElement).appendChild(s);
     }
 
-    // create/inject our button
-    // TODO replicate mouseover style
-    var tt_button = $('#plupload');
-
-    var gm_button = tt_button.clone();
-    gm_button.attr('id', 'gmusicturntable_upload_button');
-    gm_button.text('Upload from Google Music');
-    gm_button.attr('style', window.getComputedStyle(tt_button[0], null).cssText);
-    
-    gm_button.click(function() {
-        show_library();
-    });
-
-    gm_button.insertAfter(tt_button);
-}
-
-(function() {
     // turntable fires ready early, so we poll for the upload button
     if ($('#plupload').length > 0){
-        main();
+        page_init();
     } else {
         //TODO backoff
         setTimeout(arguments.callee,1000);
     }
-})();
+}
+
+main();

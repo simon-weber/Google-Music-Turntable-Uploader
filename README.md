@@ -17,7 +17,9 @@ Tricks employed:
 
 
 TODO
-* invalidate library node cache from background script
+* cache invalidation
+  * switch to 2 buttons for show/fetch - just hide one
+  * support clearing cache in b/c scripts (send {library: null})
 * turntable UI
   * make it look not terrible
     * create datatable -> turntable css for even/odd, headers, buttons
@@ -28,4 +30,4 @@ TODO
 * beta
 * 1.0
 
-Many thanks to @clehner; he figured out most of the plupload hackery.
+Many thanks to [@clehner](https://github.com/clehner); he figured out most of the plupload hackery.

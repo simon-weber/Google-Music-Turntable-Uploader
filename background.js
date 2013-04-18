@@ -132,9 +132,46 @@ function fetch_track_audio(id, callback){
 //     });
 // }
 
-// returns array of track objects
-// clients just provide callback - other args used recursively
-function fetch_library(callback, cont_token, prev_chunk){
+/*
+ * callback called with true if send_library will not incur a server hit.
+ * TODO factor into yes/no callbacks?
+ */
+function is_library_cached(callback){
+    chrome.storage.local.getBytesInUse('library', unless_error(function(bytes){
+        callback(bytes > 0);
+    }));
+}
+
+/*
+ * Main interface for sending library to cscript.
+ * If do_refresh is true, fetch the library from Google and cache before sending.
+ * Otherwise, use the cache if possible, and fetch on a cache miss.
+ */
+function send_library(do_refresh){
+    if(do_refresh){
+       _cache_and_send_library();
+    } else {
+        is_library_cached(function(is_cached){
+            if(is_cached){
+                chrome.storage.local.get('library', unless_error(function(result){
+                    chrome.extension.sendMessage({
+                        action: 'library_updated',
+                        library: library
+                    });
+                }));
+            } else {
+                _cache_and_send_library();
+            }
+        });
+    }
+}
+
+/*
+ * Fetch the library from Google and provide it to the callback.
+ * The library is an array of track objects.
+ * Callers only provide callback - other args used recursively
+ */
+function _fetch_library(callback, cont_token, prev_chunk){
     var req = {};
 
     if(arguments.length == 1){
@@ -163,18 +200,26 @@ function fetch_library(callback, cont_token, prev_chunk){
         if( !('continuationToken' in res) ){
             callback(library); // got the entire library
         } else{
-            fetch_library(callback, res.continuationToken, library);
+            _fetch_library(callback, res.continuationToken, library);
         }
     });
 }
 
-function cache_library(){
-    fetch_library(function(library) {
+/*
+ * Fetch/cache the library, then notify the content script via library_updated.
+ */
+function _cache_and_send_library(){
+    _fetch_library(function(library) {
         chrome.storage.local.set({library: library}, unless_error(function() {
-            //console.log('cached library');
+            console.log('cached library');
+            chrome.extension.sendMessage({
+                action: 'library_updated',
+                library: library}
+            );
         }));
     });
 }
+
 
 
 function main(){
@@ -193,16 +238,30 @@ function main(){
     });
 
     chrome.pageAction.onClicked.addListener(function(tab){
-        cache_library();
+        send_library(true);
     });
 
     // respond to content_script library requests
     chrome.extension.onMessage.addListener(function(request, sender, sendResponse) {
-        if (request.action == 'get_library'){
-            chrome.storage.local.get('library', unless_error(function(result){
-                sendResponse({library: result.library});
-            }));
-            return true;
+        if (request.action == 'request_library'){
+            // the actual library is not sent in a response,
+            // but in a library_updated message.
+            // (this avoids duplicate handling logic in cscript)
+            send_library(false, function(library){
+                chrome.extension.sendMessage({
+                    action: 'library_updated',
+                    library: library}
+                );
+            });
+
+        } else if (request.action == 'is_library_cached'){
+            is_library_cached(function(is_cached){
+                sendResponse(is_cached);
+            });
+            return true; // receiver waits for async response
+
+        } else if (request.action == 'refresh_library'){
+            send_library(true);
 
         } else if (request.action == 'get_track_dataurl'){
             fetch_track_audio(request.id, function(track_blob){
@@ -217,6 +276,7 @@ function main(){
         } else if (request.action == 'show_page_action'){
             chrome.pageAction.show(sender.tab.id);
         } else {
+            // TODO is this needed/useful/good practice?
             sendResponse({});
         }
     });
