@@ -12,12 +12,18 @@ Tricks employed:
 * injected script access to plupload.Uploader internals
 * dataurl serialization of audio when messaging (background -> content script -> injected script)
 * chrome.cookies to grab/monitor changes to the GM xt cookie
+* caching of library + dom nodes
+* DataTables!
 
 
 TODO
-* create turntable UI
+* invalidate library node cache from background script
+* turntable UI
   * make it look not terrible
     * create datatable -> turntable css for even/odd, headers, buttons
-  * hook upload button to each (can use their upload icon)
-  * make it not horribly slow: pulser + timeouts when building, cache afterwards
+  * lazily build datatable OR pulser during creation
+* name file intelligently
 * add id3 headers dynamically
+* memory leaks are not a feature
+* beta
+* 1.0
