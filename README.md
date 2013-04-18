@@ -13,7 +13,7 @@ Tricks employed:
 * dataurl serialization of audio when messaging (background -> content script -> injected script)
 * chrome.cookies to grab/monitor changes to the GM xt cookie
 * caching of library + dom nodes
-* DataTables!
+* http://datatables.net!
 
 
 TODO
@@ -24,6 +24,8 @@ TODO
   * lazily build datatable OR pulser during creation
 * name file intelligently
 * add id3 headers dynamically
-* memory leaks are not a feature
+* memory leaks are not a feature (triggered when showing the library)
 * beta
 * 1.0
+
+Many thanks to @clehner; he figured out most of the plupload hackery.
