@@ -1,5 +1,7 @@
 var gm_base_url = 'https://play.google.com/music/';
 var gm_service_url =  gm_base_url + 'services/';
+// cscript must message bscript once before bscript can message back
+var cscript_tab_id = null;
 
 // GM tracks have a lot of keys; storing all of them will overrun our storage
 // quota.
@@ -60,6 +62,20 @@ function unless_error(func) {
     };
 }
 
+/*
+ * Send a message to each content script without expecting a response.
+ *
+ * TODO
+ * any better way to figure out which tabs they're in?
+ * right now, duplicating pattern from manifest.json.
+ */
+function send_cscripts_message(message){
+    chrome.tabs.query({url: 'http://turntable.fm/*'}, function(tabs) {
+        for (var i = 0; i < tabs.length; i++){
+            chrome.tabs.sendMessage(tabs[i].id, message);
+        }
+    });
+}
 
 // GM:
 
@@ -133,7 +149,7 @@ function fetch_track_audio(id, callback){
 // }
 
 /*
- * callback called with true if send_library will not incur a server hit.
+ * callback called with true if get_library will not incur a server hit.
  * TODO factor into yes/no callbacks?
  */
 function is_library_cached(callback){
@@ -143,27 +159,37 @@ function is_library_cached(callback){
 }
 
 /*
- * Main interface for sending library to cscript.
+ * Main interface for retreiving the GM library.
  * If do_refresh is true, fetch the library from Google and cache before sending.
  * Otherwise, use the cache if possible, and fetch on a cache miss.
+ * if callback is called with the library (an array of song objects).
  */
-function send_library(do_refresh){
+function get_library(do_refresh, callback){
     if(do_refresh){
-       _cache_and_send_library();
+       _fetch_and_cache_library(callback);
     } else {
         is_library_cached(function(is_cached){
             if(is_cached){
                 chrome.storage.local.get('library', unless_error(function(result){
-                    chrome.extension.sendMessage({
-                        action: 'library_updated',
-                        library: library
-                    });
+                    callback(result.library);
                 }));
             } else {
-                _cache_and_send_library();
+                _fetch_and_cache_library(callback);
             }
         });
     }
+}
+
+/*
+ * Fetch/cache the library, and call the callback with the result.
+ */
+function _fetch_and_cache_library(callback){
+    _fetch_library(function(library) {
+        chrome.storage.local.set({library: library}, unless_error(function() {
+            console.log('cached library');
+            callback(library);
+        }));
+    });
 }
 
 /*
@@ -174,11 +200,11 @@ function send_library(do_refresh){
 function _fetch_library(callback, cont_token, prev_chunk){
     var req = {};
 
+    console.log('fetching library');
+
     if(arguments.length == 1){
-        console.log('no cont_token');
         prev_chunk = [];
     } else {
-        console.log('using token', cont_token);
         req = {continuationToken: cont_token};
     }
 
@@ -198,6 +224,7 @@ function _fetch_library(callback, cont_token, prev_chunk){
         }));
 
         if( !('continuationToken' in res) ){
+            console.log('fetched', library);
             callback(library); // got the entire library
         } else{
             _fetch_library(callback, res.continuationToken, library);
@@ -206,21 +233,27 @@ function _fetch_library(callback, cont_token, prev_chunk){
 }
 
 /*
- * Fetch/cache the library, then notify the content script via library_updated.
+ * Send a library_updated message to cscript with the given library.
  */
-function _cache_and_send_library(){
-    _fetch_library(function(library) {
-        chrome.storage.local.set({library: library}, unless_error(function() {
-            console.log('cached library');
-            chrome.extension.sendMessage({
-                action: 'library_updated',
-                library: library}
-            );
-        }));
+function send_library_update(library){
+    send_cscripts_message({
+        action: 'library_updated',
+        library: library
     });
 }
 
-
+/*
+ * For debugging right now.
+ */
+function _clear_cache_and_update(){
+    chrome.storage.local.remove('library', unless_error(function() {
+        console.log('cleared library cache');
+        send_cscripts_message({
+            action: 'library_updated',
+            library: null
+        });
+    }));
+}
 
 function main(){
     for (var i = 0; i < cookie_details.length; i++) {
@@ -238,30 +271,28 @@ function main(){
     });
 
     chrome.pageAction.onClicked.addListener(function(tab){
-        send_library(true);
+        get_library(true, send_library_update);
     });
 
     // respond to content_script library requests
-    chrome.extension.onMessage.addListener(function(request, sender, sendResponse) {
-        if (request.action == 'request_library'){
-            // the actual library is not sent in a response,
-            // but in a library_updated message.
-            // (this avoids duplicate handling logic in cscript)
-            send_library(false, function(library){
-                chrome.extension.sendMessage({
-                    action: 'library_updated',
-                    library: library}
-                );
-            });
+    chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
+        if (request.action == 'get_library'){
+            // the library is sent in response.
 
-        } else if (request.action == 'is_library_cached'){
-            is_library_cached(function(is_cached){
-                sendResponse(is_cached);
+            get_library(false, function(library){
+                console.log('respond to get_library', library);
+                sendResponse({library: library});
             });
             return true; // receiver waits for async response
 
+        } else if (request.action == 'is_library_cached'){
+            is_library_cached(function(is_cached){
+                sendResponse({is_cached: is_cached});
+            });
+            return true;
+
         } else if (request.action == 'refresh_library'){
-            send_library(true);
+            get_library(true, send_library_update);
 
         } else if (request.action == 'get_track_dataurl'){
             fetch_track_audio(request.id, function(track_blob){

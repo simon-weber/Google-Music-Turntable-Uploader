@@ -1,7 +1,3 @@
-/* this code needs to be injected into the page in order to interact with
- * the global `turntable` object. */
-
-
 /**
 * Creates and returns a blob from a data URL (either base64 encoded or not).
 * source: https://github.com/ebidel/filer.js/blob/master/src/filer.js#L128
@@ -9,7 +5,7 @@
 * @param {string} dataURL The data URL to convert.
 * @return {Blob} A blob representing the array buffer data.
 */
-function gmusicturntable_dataurl_to_blob(dataURL) {
+function gmtt_dataurl_to_blob(dataURL) {
     /* TODO fix duplicate declarations */
     var BASE64_MARKER = ';base64,';
     if (dataURL.indexOf(BASE64_MARKER) == -1) {
