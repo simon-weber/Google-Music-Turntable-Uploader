@@ -17,15 +17,15 @@ Tricks employed:
 
 
 TODO
-* invalidate library node cache from background script
 * turntable UI
   * make it look not terrible
     * create datatable -> turntable css for even/odd, headers, buttons
   * lazily build datatable OR pulser during creation
 * name file intelligently
 * add id3 headers dynamically
-* memory leaks are not a feature (triggered when showing the library)
 * beta
+* better cache invalidation messaging (immediately trigger refresh text on fetch)
+* multiple tab testing
 * 1.0
 
-Many thanks to @clehner; he figured out most of the plupload hackery.
+Many thanks to [@clehner](https://github.com/clehner); he figured out most of the plupload hackery.
