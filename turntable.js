@@ -24,13 +24,18 @@ function upload_track(id){
     chrome.runtime.sendMessage({action: 'get_track_dataurl', id: id}, function(response) {
         var dataurl = response.dataurl;
 
+        if(dataurl === null){
+            // couldn't download -- quota exceeded?
+           $("button[data-id='" + id + "']").text("download error");
+           return;
+        }
+
         var code = '(' + function(inject_dataurl) {
             var blob = gmtt_dataurl_to_blob(inject_dataurl);
 
             /* spoof the File interface
              * TODO
              * name based on metadata
-             * add id3 headers
              */
             blob.name = 'myfile.mp3';
             blob.lastModifiedDate = new Date();

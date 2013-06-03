@@ -83,6 +83,7 @@ function send_cscripts_message(message){
 function _authed_gm_request(endpoint, data, callback){
     chrome.storage.local.get(cookie_names, unless_error(function(cookie_map) {
         if (Object.keys(cookie_map).length != cookie_details.length){
+            //TODO this needs to be sent to the ui somehow
             console.log('auth invalid: ', cookie_map);
             return;
         }
@@ -101,52 +102,59 @@ function _authed_gm_request(endpoint, data, callback){
     }));
 }
 
-// returns a Blob
+//Returns a Blob, using the GM song streaming interface.
+//This doesn't count against the quota, but doesn't include id3 data.
+//
+//function fetch_track_audio(id, callback){
+//    var url = gm_base_url + 'play';
+//
+//    // get the stream url from gmusic, then get the actual audio
+//    $.get(
+//        url,
+//        {u: 0, pt: 'e', songid: id},
+//        function(res) {
+//            // jquery doesn't deal with binary data well
+//            var xhr = new XMLHttpRequest();
+//            xhr.open('GET', res.url, true);
+//            xhr.responseType = 'blob';
+//          
+//            xhr.onload = function(oEvent) {
+//                callback(xhr.response);
+//            };
+//          
+//            xhr.send();
+//        },
+//        'json'
+//        )
+//        .fail(function(res) { console.log('request failed:', url, data); });
+//}
+
+
+//Returns a Blob, using the GM song download interface.
+//This counts against your 2 song download quota, but gets us id3 data for free.
+//Send callback null on error.
 function fetch_track_audio(id, callback){
-    var url = gm_base_url + 'play';
+    _authed_gm_request('multidownload', {songIds: [id]}, function(res){
+        console.log('audio fetch url:', res.url);
 
-    // get the stream url from gmusic, then get the actual audio
-    $.get(
-        url,
-        {u: 0, pt: 'e', songid: id},
-        function(res) {
-            // jquery doesn't deal with binary data well
-            var xhr = new XMLHttpRequest();
-            xhr.open('GET', res.url, true);
-            xhr.responseType = 'blob';
-          
-            xhr.onload = function(oEvent) {
-                callback(xhr.response);
-            };
-          
-            xhr.send();
-        },
-        'json'
-        )
-        .fail(function(res) { console.log('request failed:', url, data); });
+        // jquery doesn't deal with binary data well
+        var xhr = new XMLHttpRequest();
+        xhr.open('GET', res.url, true);
+        xhr.responseType = 'blob';
+         
+        xhr.onload = function(oEvent) {
+            console.log(xhr);
+            callback(xhr.response);
+        };
+        xhr.onerror = function(oEvent) {
+            console.log('could not fetch audio', xhr);
+            callback(null);
+        };
+         
+        xhr.send();
+
+    });
 }
-
-
-// //this doesn't guarantee an mp3 (which turntable needs)
-// //and also counts against your quota.
-// function fetch_track_audio(id, callback){
-//     _authed_gm_request('multidownload', {songIds: [id]}, function(res){
-//         console.log('audio fetch url:', res.url);
-// 
-//         // jquery doesn't deal with binary data well
-//         var xhr = new XMLHttpRequest();
-//         xhr.open('GET', res.url, true);
-//         xhr.responseType = 'blob';
-//          
-//         xhr.onload = function(oEvent) {
-//             console.log(xhr);
-//             callback(xhr.response);
-//         };
-//          
-//         xhr.send();
-// 
-//     });
-// }
 
 /*
  * callback called with true if get_library will not incur a server hit.
@@ -296,11 +304,15 @@ function main(){
 
         } else if (request.action == 'get_track_dataurl'){
             fetch_track_audio(request.id, function(track_blob){
-                var reader = new FileReader();
-                reader.onload = function(event){
-                    sendResponse({dataurl: event.target.result});
-                };
-                reader.readAsDataURL(track_blob);
+                if(track_blob === null){
+                    sendResponse({dataurl: null});
+                } else {
+                    var reader = new FileReader();
+                    reader.onload = function(event){
+                        sendResponse({dataurl: event.target.result});
+                    };
+                    reader.readAsDataURL(track_blob);
+                }
             });
             return true;
 
