@@ -17,32 +17,36 @@ function inject_code(code){
 
 /*
  * Use the bscript to fetch a GM file, then trick Turntable into uploading it.
+ * filename is a fake name to give to Turntable.
  */
-function upload_track(id){
-    console.log('upload_track', id);
+function upload_track(id, filename){
+    console.log('upload_track', id, filename);
+
+    var track_button = $("button[data-id='" + id + "']");
+    track_button.attr('disable', true);
+    track_button.text('downloading');
 
     chrome.runtime.sendMessage({action: 'get_track_dataurl', id: id}, function(response) {
         var dataurl = response.dataurl;
 
         if(dataurl === null){
             // couldn't download -- quota exceeded?
-           $("button[data-id='" + id + "']").text("download error");
+           track_button.text("download error");
            return;
         }
 
-        var code = '(' + function(inject_dataurl) {
+        var code = '(' + function(inject_dataurl, inject_filename) {
             var blob = gmtt_dataurl_to_blob(inject_dataurl);
 
-            /* spoof the File interface
-             * TODO
-             * name based on metadata
-             */
-            blob.name = 'myfile.mp3';
+            /* spoof the File interface */
+            blob.name = inject_filename;
             blob.lastModifiedDate = new Date();
 
             document.querySelector('input[type=file]').onchange.call({files:[blob]});
 
-        } + ')(' + JSON.stringify(dataurl) + ')';
+        } + ')' + 
+            '(' + JSON.stringify(dataurl) +
+            ',' + JSON.stringify(filename) + ')';
 
        inject_code(code);
     });
@@ -68,6 +72,11 @@ function show_library(){
  */
 function _show_library(){
     console.log('_show_library');
+
+    // reset to show the playlist queue
+    // this allows users to see their uploaded song being uploaded
+    $('#upload-pane .back').click();
+
     // insert into the dom in a random location, keeping it hidden.
     // we just need to be able to move it later from injected code.
     
@@ -102,8 +111,10 @@ function refresh_ui_cache(library, callback){
     present_show_button();
 
     var show_button = $('#gmtt_show_library');
+    
+    //TODO this disabling doesn't currently do anything
     show_button.attr('disable', true);
-    show_button.text('Refreshing library...');
+    show_button.text('Building library...');
 
     _cache_library_node(library, function() {
         show_button.attr('disable', false);
@@ -166,11 +177,16 @@ function _cache_library_node(library, callback){
 
     // dataTable expects parent elements
     library_node.wrap('<div />');
+    
+    // TODO can this be async?
     // expensive and synchronous call
     library_node.dataTable(dt_config);
 
     library_node.on('click', ':button.gmtt', function(event){
-        upload_track(event.target.getAttribute('data-id'));
+        //TODO this is an assumption based on the order of cols
+        var title = $(event.target).parent().siblings()[0].textContent;
+
+        upload_track(event.target.getAttribute('data-id'), title + '.mp3');
         return false; // stop propogation
     });
 
@@ -184,7 +200,7 @@ function present_show_button(){
 
 function present_fetch_button(){
     $('#gmtt_show_library').hide();
-    $('#gmtt_fetch_library').show();
+    $('#gmtt_fetch_library').text('Fetch Google Music library').show();
 }
 
 /*
@@ -200,14 +216,13 @@ function page_init(){
     show_button.attr('style', window.getComputedStyle(tt_button[0], null).cssText);
     show_button.text('Upload from Google Music');
     show_button.click(show_library);
-    // reset to show the playlist queue
-    show_button.click(function(){$('#upload-pane .back').click()});
 
     var fetch_button = show_button.clone();
     fetch_button.attr('id', 'gmtt_fetch_library');
     fetch_button.text('Fetch Google Music library');
     fetch_button.click(function() {
         chrome.runtime.sendMessage({action: 'refresh_library'});
+        fetch_button.text('(working...)');
     });
 
     show_button.hide();
@@ -247,13 +262,16 @@ function main(){
             }
 
             button.text(new_text);
+        } else if(request.action == 'invalid_auth'){
+            present_fetch_button();
+            alert('Please open Google Music in a tab before accessing your library.');
         }
     });
 
     // inject our files to use them as libraries later
     for(var i = 0; i < inject_files.length; i++){
         var s = document.createElement('script');
-        console.log('injecting', chrome.extension.getURL(inject_files[i]));
+        //console.log('injecting', chrome.extension.getURL(inject_files[i]));
         s.src = chrome.extension.getURL(inject_files[i]);
         //TODO don't make functions in a loop
         s.onload = function() {

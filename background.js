@@ -83,8 +83,8 @@ function send_cscripts_message(message){
 function _authed_gm_request(endpoint, data, callback){
     chrome.storage.local.get(cookie_names, unless_error(function(cookie_map) {
         if (Object.keys(cookie_map).length != cookie_details.length){
-            //TODO this needs to be sent to the ui somehow
             console.log('auth invalid: ', cookie_map);
+            send_cscripts_message({action: 'invalid_auth'});
             return;
         }
 
@@ -135,6 +135,12 @@ function _authed_gm_request(endpoint, data, callback){
 //Send callback null on error.
 function fetch_track_audio(id, callback){
     _authed_gm_request('multidownload', {songIds: [id]}, function(res){
+        if (typeof res.url === 'undefined'){
+            console.log('could not get fetch url. download limit reached?');
+            callback(null);
+            return;
+        }
+
         console.log('audio fetch url:', res.url);
 
         // jquery doesn't deal with binary data well
@@ -157,7 +163,6 @@ function fetch_track_audio(id, callback){
                 });
             }
         };
-        //TODO I think I need to check for a 404 -- need to verify
         xhr.onerror = function(oEvent) {
             console.log('could not fetch audio', xhr);
             callback(null);
