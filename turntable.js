@@ -200,6 +200,8 @@ function page_init(){
     show_button.attr('style', window.getComputedStyle(tt_button[0], null).cssText);
     show_button.text('Upload from Google Music');
     show_button.click(show_library);
+    // reset to show the playlist queue
+    show_button.click(function(){$('#upload-pane .back').click()});
 
     var fetch_button = show_button.clone();
     fetch_button.attr('id', 'gmtt_fetch_library');
