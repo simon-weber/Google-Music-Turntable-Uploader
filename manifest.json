@@ -1,13 +1,13 @@
 {
     "manifest_version": 2,
 
-    "name": "Google Music to Turntable",
+    "name": "Turntable Uploader for Google Music™",
     "version": "1.0",
 
-    "description": "Easily upload to turntable.fm from Google Music.",
+    "description": "Easily upload songs from your Google Music™ library to turntable.fm.",
 
     "page_action": {
-        "default_title": "Google Music to Turntable"
+        "default_title": "Turntable Uploader for Google Music™"
     },
 
     "background": {
