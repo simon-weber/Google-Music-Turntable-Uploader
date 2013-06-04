@@ -5,9 +5,6 @@
     "version": "1.0",
 
     "description": "This extension allows you to easily upload to turntable.fm from Google Music.",
-    "icons": {
-        "128": "ok.png"
-    },
 
     "page_action": {
         "default_title": "Google Music to Turntable"
