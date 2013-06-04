@@ -237,6 +237,14 @@ function main(){
             } else {
                 refresh_ui_cache(request.library);
             }
+        } else if(request.action == 'download_progress'){
+            var button = $("button[data-id='" + request.id + "']");
+            var new_text = Math.floor(request.percent) + "%";
+            if(new_text == '100%'){
+                new_text = 'queued';
+            }
+
+            button.text(new_text);
         }
     });
 

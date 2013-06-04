@@ -146,6 +146,18 @@ function fetch_track_audio(id, callback){
             console.log(xhr);
             callback(xhr.response);
         };
+        xhr.onprogress = function(oEvent){
+            if(oEvent.lengthComputable){
+                var percent = (oEvent.loaded / oEvent.total) * 100;
+
+                send_cscripts_message({
+                    action: 'download_progress',
+                    id: id,
+                    percent: percent
+                });
+            }
+        };
+        //TODO I think I need to check for a 404 -- need to verify
         xhr.onerror = function(oEvent) {
             console.log('could not fetch audio', xhr);
             callback(null);
