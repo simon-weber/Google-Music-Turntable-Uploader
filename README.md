@@ -3,6 +3,8 @@ Your Google Music library can be viewed directly in turntable, and songs can be 
 
 Note that each upload to turntable counts against your "2 downloads per song from the web" Google Music quota.
 
+To install right now, you'll need to download the code (either the zip button or through git), then [load the unpacked extension](http://superuser.com/questions/247651/how-does-one-install-an-extension-for-chrome-browser-from-the-local-file-system).
+
 Use:
 * Open Google Music in a tab and log in (the extension will use this session for auth)
 * Open turntable in another tab and enter a room
