@@ -12,6 +12,9 @@ Use:
 * After fetching the library once, you can hit the 'Upload from Google Music' button
 * At any point, click the page action to fetch your library again (eg, if you added music)
 
+Troubleshooting:
+* if you see "download error" when trying to upload, try refreshing your Google Music tab. If that doesn't work, you may have used up your 2 download quota on Google Music.
+
 There are some more details on how it was built at my blog: [chrome extension hacks](www.simonmweber.com/2013/06/05/chrome-extension-hacks.html).
 
 TODO
